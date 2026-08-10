@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="si">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A2Z Store — Admin Panel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#241934; --ink-soft:#4A3F5C; --ink-2:#332450;
+    --paper:#FBF3E7; --paper-2:#F3E8D8;
+    --mango:#F2A93B; --guava:#E85D75; --teal:#1C8C74;
+    --line: rgba(36,25,52,0.14);
+    --danger:#C6394A;
+  }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  body{ font-family:'Inter', sans-serif; background:var(--paper); color:var(--ink); line-height:1.5; }
+  h1,h2,.display{ font-family:'Fraunces', serif; }
+  .mono{ font-family:'IBM Plex Mono', monospace; }
+  button, input, select, textarea{ font:inherit; }
+
+  /* ---- Login gate ---- */
+  #loginScreen{
+    min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px;
+  }
+  .login-card{
+    background:white; border:1.5px solid var(--ink); border-radius:16px; padding:36px 32px;
+    max-width:380px; width:100%; text-align:center; box-shadow:6px 6px 0 var(--ink);
+  }
+  .login-card h1{ font-size:24px; margin-bottom:6px; }
+  .login-card p{ font-size:13.5px; color:var(--ink-soft); margin-bottom:22px; }
+  .login-card input{
+    width:100%; padding:13px 14px; border-radius:8px; border:1.5px solid var(--line);
+    font-size:15px; margin-bottom:12px; background:var(--paper-2);
+  }
+  .login-card input:focus{ outline:2px solid var(--teal); border-color:var(--teal); }
+  .login-card button{
+    width:100%; padding:13px 0; border-radius:8px; border:none; background:var(--ink);
+    color:var(--paper); font-weight:700; font-size:14.5px;
+  }
+  .login-card button:hover{ background:var(--ink-2); }
+  .login-error{ color:var(--danger); font-size:13px; margin-top:10px; min-height:16px; font-weight:600; }
+
+  /* ---- App shell ---- */
+  #app{ display:none; }
+  header.topbar{
+    position:sticky; top:0; z-index:40; background:var(--ink); color:var(--paper);
+    padding:16px 24px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;
+  }
+  .topbar .logo{ font-size:20px; font-weight:700; }
+  .topbar .logo span{ color:var(--mango); }
+  .tabs{ display:flex; gap:6px; flex-wrap:wrap; }
+  .tabs button{
+    padding:9px 16px; border-radius:3px 10px 3px 10px; border:1.5px solid rgba(251,243,231,0.3);
+    background:transparent; color:var(--paper); font-weight:600; font-size:13.5px;
+  }
+  .tabs button.active{ background:var(--mango); color:var(--ink); border-color:var(--mango); }
+  .logout-btn{
+    background:transparent; border:1.5px solid rgba(251,243,231,0.3); color:var(--paper);
+    padding:9px 14px; border-radius:3px 10px 3px 10px; font-size:13px; font-weight:600;
+  }
+  .logout-btn:hover{ border-color:var(--guava); color:var(--guava); }
+
+  main{ max-width:960px; margin:0 auto; padding:32px 24px 80px; }
+  .panel{ display:none; }
+  .panel.active{ display:block; }
+
+  .card-box{
+    background:white; border:1.5px solid var(--ink); border-radius:14px; padding:22px;
+    margin-bottom:20px;
+  }
+  .card-box h2{ font-size:18px; margin-bottom:16px; }
+  .field-row{ display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px; }
+  .field{ display:flex; flex-direction:column; gap:5px; }
+  .field.full{ grid-column:1/-1; }
+  .field label{ font-size:12.5px; font-weight:600; color:var(--ink-soft); }
+  .field input, .field select, .field textarea{
+    padding:10px 12px; border-radius:8px; border:1.5px solid var(--line); background:var(--paper-2);
+    font-size:14px;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus{ outline:2px solid var(--teal); border-color:var(--teal); }
+  .field textarea{ resize:vertical; min-height:60px; }
+
+  .btn{
+    padding:10px 18px; border-radius:3px 10px 3px 10px; border:1.5px solid var(--ink);
+    background:var(--ink); color:var(--paper); font-weight:700; font-size:13.5px;
+  }
+  .btn:hover{ background:var(--ink-2); }
+  .btn.secondary{ background:transparent; color:var(--ink); }
+  .btn.secondary:hover{ background:var(--paper-2); }
+  .btn.danger{ background:var(--danger); border-color:var(--danger); color:white; }
+  .btn.danger:hover{ filter:brightness(1.08); }
+  .btn.small{ padding:7px 12px; font-size:12.5px; }
+
+  .list-row{
+    display:flex; align-items:center; gap:12px; padding:12px 14px; border:1.5px solid var(--line);
+    border-radius:10px; margin-bottom:10px; background:var(--paper-2);
+  }
+  .list-row .thumb{
+    width:44px; height:44px; border-radius:8px; background:white; display:flex; align-items:center;
+    justify-content:center; font-size:20px; flex-shrink:0; border:1px solid var(--line); overflow:hidden;
+  }
+  .list-row .thumb img{ width:100%; height:100%; object-fit:cover; }
+  .list-row .info{ flex:1; min-width:0; }
+  .list-row .info .name{ font-weight:600; font-size:14px; }
+  .list-row .info .meta{ font-size:12px; color:var(--ink-soft); font-family:'IBM Plex Mono', monospace; }
+  .list-row .actions{ display:flex; gap:6px; flex-shrink:0; }
+
+  .empty-note{ font-size:13px; color:var(--ink-soft); font-family:'IBM Plex Mono', monospace; padding:16px 0; text-align:center; }
+  .toast{
+    position:fixed; bottom:22px; left:50%; transform:translateX(-50%); background:var(--ink); color:var(--paper);
+    padding:12px 22px; border-radius:999px; font-size:13.5px; font-weight:600; z-index:100;
+    opacity:0; pointer-events:none; transition:.25s;
+  }
+  .toast.show{ opacity:1; transform:translate(-50%,-6px); }
+  .hint{ font-size:12.5px; color:var(--ink-soft); margin-bottom:14px; }
+  .warn-box{
+    background:#FCEFD8; border:1.5px solid var(--mango); border-radius:10px; padding:14px 16px;
+    font-size:13px; color:var(--ink-soft); margin-bottom:20px;
+  }
+  @media(max-width:640px){ .field-row{ grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+
+<div id="loginScreen">
+  <div class="login-card">
+    <h1>A2Z Store</h1>
+    <p>Admin Panel — access කරන්න password එක දාන්න</p>
+    <input type="password" id="pwInput" placeholder="Password" autocomplete="off">
+    <button id="loginBtn">Login</button>
+    <div class="login-error" id="loginError"></div>
+  </div>
+</div>
+
+<div id="app">
+  <header class="topbar">
+    <div class="logo">A2<span>Z</span> Store — Admin</div>
+    <div class="tabs">
+      <button data-panel="settingsPanel" class="active">Site Settings</button>
+      <button data-panel="categoriesPanel">Categories</button>
+      <button data-panel="productsPanel">Products</button>
+    </div>
+    <button class="logout-btn" id="logoutBtn">Logout</button>
+  </header>
+
+  <main>
+    <div class="warn-box">
+      ⚠️ මේ password check එක browser එකේ විතරයි වැඩ කරන්නේ — server-side security නෙවෙයි. Real security එකට Firebase Database Rules + Authentication සෙට් කරන්න ඕන. දැනට link එක කාටවත් share කරන්න එපා.
+    </div>
+
+    <!-- Settings -->
+    <div class="panel active" id="settingsPanel">
+      <div class="card-box">
+        <h2>Site Settings</h2>
+        <div class="field-row">
+          <div class="field"><label>Store Name</label><input id="s_storeName" placeholder="A2Z Store"></div>
+          <div class="field"><label>Marquee (running text)</label><input id="s_marquee" placeholder="A2Z STORE — A සිට Z දක්වා..."></div>
+        </div>
+        <div class="field-row">
+          <div class="field full"><label>Hero Tagline</label><textarea id="s_tagline" placeholder="Fashion, Electronics, Beauty..."></textarea></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>WhatsApp Number (94 වලින් පටන්, + නැතුව)</label><input id="s_whatsapp" placeholder="94770000000"></div>
+          <div class="field"><label>Display Phone</label><input id="s_phone" placeholder="+94 77 000 0000"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Facebook URL</label><input id="s_facebook" placeholder="https://facebook.com/a2zstore"></div>
+          <div class="field"><label>Instagram URL</label><input id="s_instagram" placeholder="https://instagram.com/a2zstore"></div>
+        </div>
+        <button class="btn" id="saveSettingsBtn">Save Settings</button>
+      </div>
+    </div>
+
+    <!-- Categories -->
+    <div class="panel" id="categoriesPanel">
+      <div class="card-box">
+        <h2 id="catFormTitle">Add Category</h2>
+        <div class="field-row">
+          <div class="field"><label>Label</label><input id="c_label" placeholder="Fashion"></div>
+          <div class="field"><label>Emoji</label><input id="c_emoji" placeholder="👗"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>A-Z Letter (hero strip එකේ පේන්න)</label><input id="c_letter" maxlength="1" placeholder="F"></div>
+          <div class="field"><label>Order (number)</label><input id="c_order" type="number" placeholder="1"></div>
+        </div>
+        <button class="btn" id="saveCategoryBtn">Add Category</button>
+        <button class="btn secondary" id="cancelCategoryBtn" style="display:none;">Cancel Edit</button>
+      </div>
+      <div class="card-box">
+        <h2>Categories</h2>
+        <div id="categoryList"></div>
+      </div>
+    </div>
+
+    <!-- Products -->
+    <div class="panel" id="productsPanel">
+      <div class="card-box">
+        <h2 id="prodFormTitle">Add Product</h2>
+        <div class="field-row">
+          <div class="field"><label>Name</label><input id="p_name" placeholder="Casual Cotton T-Shirt"></div>
+          <div class="field"><label>Price</label><input id="p_price" placeholder="Rs. 1,250"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Category</label><select id="p_category"></select></div>
+          <div class="field"><label>Order (number)</label><input id="p_order" type="number" placeholder="1"></div>
+        </div>
+        <div class="field-row">
+          <div class="field full"><label>Description</label><textarea id="p_desc" placeholder="Unisex, colours ගණනාවක් තියෙනවා."></textarea></div>
+        </div>
+        <div class="field-row">
+          <div class="field full">
+            <label>Emoji (👕) හෝ Image URL (https://...) — දෙකෙන් එකක් දාන්න</label>
+            <input id="p_image" placeholder="👕 හෝ https://i.imgur.com/xxxx.jpg">
+          </div>
+        </div>
+        <button class="btn" id="saveProductBtn">Add Product</button>
+        <button class="btn secondary" id="cancelProductBtn" style="display:none;">Cancel Edit</button>
+      </div>
+      <div class="card-box">
+        <h2>Products</h2>
+        <div id="productList"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import { getDatabase, ref, onValue, push, set, update, remove } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+
+const ADMIN_PASSWORD = "Online StorePK2009";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDcgMM0GzYsSFiiT0BKZXGmVkw0BA3-xaA",
+  authDomain: "a2zonlinestore-1acce.firebaseapp.com",
+  databaseURL: "https://a2zonlinestore-1acce-default-rtdb.firebaseio.com/",
+  projectId: "a2zonlinestore-1acce",
+  storageBucket: "a2zonlinestore-1acce.firebasestorage.app",
+  messagingSenderId: "437015505623",
+  appId: "1:437015505623:web:df57fd3b24b17188c1de92",
+};
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+/* ---- Login ---- */
+const loginScreen = document.getElementById("loginScreen");
+const appEl = document.getElementById("app");
+const pwInput = document.getElementById("pwInput");
+const loginBtn = document.getElementById("loginBtn");
+const loginError = document.getElementById("loginError");
+
+function tryLogin(){
+  if(pwInput.value === ADMIN_PASSWORD){
+    sessionStorage.setItem("a2z_admin_ok", "1");
+    loginScreen.style.display = "none";
+    appEl.style.display = "block";
+  } else {
+    loginError.textContent = "වැරදි password එකක්. නැවත try කරන්න.";
+  }
+}
+loginBtn.onclick = tryLogin;
+pwInput.addEventListener("keydown", e=>{ if(e.key === "Enter") tryLogin(); });
+document.getElementById("logoutBtn").onclick = ()=>{
+  sessionStorage.removeItem("a2z_admin_ok");
+  location.reload();
+};
+if(sessionStorage.getItem("a2z_admin_ok") === "1"){
+  loginScreen.style.display = "none";
+  appEl.style.display = "block";
+}
+
+/* ---- Tabs ---- */
+document.querySelectorAll(".tabs button").forEach(btn=>{
+  btn.onclick = ()=>{
+    document.querySelectorAll(".tabs button").forEach(b=>b.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById(btn.dataset.panel).classList.add("active");
+  };
+});
+
+/* ---- Toast ---- */
+let toastTimer;
+function toast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove("show"), 2200);
+}
+
+/* ---- Settings ---- */
+const settingsFields = ["storeName","marquee","tagline","whatsapp","phone","facebook","instagram"];
+onValue(ref(db, "settings"), snap=>{
+  const s = snap.val() || {};
+  settingsFields.forEach(f=>{
+    const el = document.getElementById("s_"+f);
+    if(el && document.activeElement !== el) el.value = s[f] || "";
+  });
+});
+document.getElementById("saveSettingsBtn").onclick = async ()=>{
+  const data = {};
+  settingsFields.forEach(f=> data[f] = document.getElementById("s_"+f).value.trim());
+  await set(ref(db, "settings"), data);
+  toast("Settings saved ✓");
+};
+
+/* ---- Categories ---- */
+let categories = {};
+let editingCatId = null;
+
+onValue(ref(db, "categories"), snap=>{
+  categories = snap.val() || {};
+  renderCategoryList();
+  renderCategorySelect();
+});
+
+function renderCategoryList(){
+  const wrap = document.getElementById("categoryList");
+  const arr = Object.entries(categories).map(([id,c])=>({id,...c})).sort((a,b)=>(a.order??0)-(b.order??0));
+  wrap.innerHTML = "";
+  if(arr.length === 0){ wrap.innerHTML = `<div class="empty-note">තවම categories නෑ. උඩින් එකතු කරන්න.</div>`; return; }
+  arr.forEach(c=>{
+    const row = document.createElement("div");
+    row.className = "list-row";
+    row.innerHTML = `
+      <div class="thumb">${c.emoji || "🏷️"}</div>
+      <div class="info">
+        <div class="name">${c.label}</div>
+        <div class="meta">letter: ${c.letter || "—"} · order: ${c.order ?? "—"}</div>
+      </div>
+      <div class="actions">
+        <button class="btn secondary small" data-edit="${c.id}">Edit</button>
+        <button class="btn danger small" data-del="${c.id}">Delete</button>
+      </div>`;
+    wrap.appendChild(row);
+  });
+  wrap.querySelectorAll("[data-edit]").forEach(b=> b.onclick = ()=> editCategory(b.dataset.edit));
+  wrap.querySelectorAll("[data-del]").forEach(b=> b.onclick = ()=> deleteCategory(b.dataset.del));
+}
+
+function renderCategorySelect(){
+  const sel = document.getElementById("p_category");
+  const current = sel.value;
+  const arr = Object.entries(categories).map(([id,c])=>({id,...c})).sort((a,b)=>(a.order??0)-(b.order??0));
+  sel.innerHTML = arr.map(c=>`<option value="${c.id}">${c.label}</option>`).join("");
+  if(arr.some(c=>c.id===current)) sel.value = current;
+}
+
+function editCategory(id){
+  const c = categories[id];
+  editingCatId = id;
+  document.getElementById("c_label").value = c.label || "";
+  document.getElementById("c_emoji").value = c.emoji || "";
+  document.getElementById("c_letter").value = c.letter || "";
+  document.getElementById("c_order").value = c.order ?? "";
+  document.getElementById("catFormTitle").textContent = "Edit Category";
+  document.getElementById("saveCategoryBtn").textContent = "Save Changes";
+  document.getElementById("cancelCategoryBtn").style.display = "inline-block";
+}
+function resetCategoryForm(){
+  editingCatId = null;
+  ["c_label","c_emoji","c_letter","c_order"].forEach(id=> document.getElementById(id).value = "");
+  document.getElementById("catFormTitle").textContent = "Add Category";
+  document.getElementById("saveCategoryBtn").textContent = "Add Category";
+  document.getElementById("cancelCategoryBtn").style.display = "none";
+}
+document.getElementById("cancelCategoryBtn").onclick = resetCategoryForm;
+
+document.getElementById("saveCategoryBtn").onclick = async ()=>{
+  const label = document.getElementById("c_label").value.trim();
+  if(!label){ toast("Label එකක් දාන්න"); return; }
+  const data = {
+    label,
+    emoji: document.getElementById("c_emoji").value.trim(),
+    letter: document.getElementById("c_letter").value.trim().toUpperCase(),
+    order: Number(document.getElementById("c_order").value) || 0,
+  };
+  if(editingCatId){
+    await update(ref(db, "categories/"+editingCatId), data);
+    toast("Category updated ✓");
+  } else {
+    await set(push(ref(db, "categories")), data);
+    toast("Category added ✓");
+  }
+  resetCategoryForm();
+};
+
+async function deleteCategory(id){
+  if(!confirm("මේ category එක delete කරන්නද? (products delete වෙන්නෙ නෑ, category select කරන්න බැරි වෙයි)")) return;
+  await remove(ref(db, "categories/"+id));
+  toast("Category deleted");
+}
+
+/* ---- Products ---- */
+let products = {};
+let editingProdId = null;
+
+onValue(ref(db, "products"), snap=>{
+  products = snap.val() || {};
+  renderProductList();
+});
+
+function renderProductList(){
+  const wrap = document.getElementById("productList");
+  const arr = Object.entries(products).map(([id,p])=>({id,...p})).sort((a,b)=>(a.order??0)-(b.order??0));
+  wrap.innerHTML = "";
+  if(arr.length === 0){ wrap.innerHTML = `<div class="empty-note">තවම products නෑ. උඩින් එකතු කරන්න.</div>`; return; }
+  arr.forEach(p=>{
+    const cat = categories[p.category];
+    const isUrl = p.image && p.image.startsWith("http");
+    const row = document.createElement("div");
+    row.className = "list-row";
+    row.innerHTML = `
+      <div class="thumb">${isUrl ? `<img src="${p.image}">` : (p.image || "🛍️")}</div>
+      <div class="info">
+        <div class="name">${p.name}</div>
+        <div class="meta">${p.price || ""} · ${cat ? cat.label : "no category"}</div>
+      </div>
+      <div class="actions">
+        <button class="btn secondary small" data-edit="${p.id}">Edit</button>
+        <button class="btn danger small" data-del="${p.id}">Delete</button>
+      </div>`;
+    wrap.appendChild(row);
+  });
+  wrap.querySelectorAll("[data-edit]").forEach(b=> b.onclick = ()=> editProduct(b.dataset.edit));
+  wrap.querySelectorAll("[data-del]").forEach(b=> b.onclick = ()=> deleteProduct(b.dataset.del));
+}
+
+function editProduct(id){
+  const p = products[id];
+  editingProdId = id;
+  document.getElementById("p_name").value = p.name || "";
+  document.getElementById("p_price").value = p.price || "";
+  document.getElementById("p_category").value = p.category || "";
+  document.getElementById("p_order").value = p.order ?? "";
+  document.getElementById("p_desc").value = p.desc || "";
+  document.getElementById("p_image").value = p.image || "";
+  document.getElementById("prodFormTitle").textContent = "Edit Product";
+  document.getElementById("saveProductBtn").textContent = "Save Changes";
+  document.getElementById("cancelProductBtn").style.display = "inline-block";
+}
+function resetProductForm(){
+  editingProdId = null;
+  ["p_name","p_price","p_order","p_desc","p_image"].forEach(id=> document.getElementById(id).value = "");
+  document.getElementById("prodFormTitle").textContent = "Add Product";
+  document.getElementById("saveProductBtn").textContent = "Add Product";
+  document.getElementById("cancelProductBtn").style.display = "none";
+}
+document.getElementById("cancelProductBtn").onclick = resetProductForm;
+
+document.getElementById("saveProductBtn").onclick = async ()=>{
+  const name = document.getElementById("p_name").value.trim();
+  if(!name){ toast("Name එකක් දාන්න"); return; }
+  const data = {
+    name,
+    price: document.getElementById("p_price").value.trim(),
+    category: document.getElementById("p_category").value,
+    order: Number(document.getElementById("p_order").value) || 0,
+    desc: document.getElementById("p_desc").value.trim(),
+    image: document.getElementById("p_image").value.trim(),
+  };
+  if(editingProdId){
+    await update(ref(db, "products/"+editingProdId), data);
+    toast("Product updated ✓");
+  } else {
+    await set(push(ref(db, "products")), data);
+    toast("Product added ✓");
+  }
+  resetProductForm();
+};
+
+async function deleteProduct(id){
+  if(!confirm("මේ product එක delete කරන්නද?")) return;
+  await remove(ref(db, "products/"+id));
+  toast("Product deleted");
+}
+</script>
+
+</body>
+</html>
